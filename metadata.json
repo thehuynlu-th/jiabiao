@@ -1,0 +1,6 @@
+{
+  "name": "Kitchen Shift & Leave Manager",
+  "description": "二館廚房排假系統，支援員工工號登入、月度排班矩陣與即時排休審核。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
