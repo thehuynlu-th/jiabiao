@@ -1,4 +1,16 @@
-import { UtensilsCrossed, Database, UserCheck, Calendar, ShieldCheck, User, PlusCircle, KeyRound, FileSpreadsheet } from 'lucide-react';
+import {
+  UtensilsCrossed,
+  Database,
+  UserCheck,
+  Calendar,
+  ShieldCheck,
+  User,
+  PlusCircle,
+  KeyRound,
+  FileSpreadsheet,
+  LogOut,
+  Lock,
+} from 'lucide-react';
 import { Profile } from '../types';
 import { StaffAvatar, isFemaleStaff } from './StaffAvatar';
 
@@ -12,6 +24,7 @@ interface Props {
   onOpenAddStaff: () => void;
   onOpenImportStaff: () => void;
   onOpenLogin: () => void;
+  onLogout: () => void;
   currentMonth: number;
   currentYear: number;
   onChangeMonth: (delta: number) => void;
@@ -28,6 +41,7 @@ export default function Navbar({
   onOpenAddStaff,
   onOpenImportStaff,
   onOpenLogin,
+  onLogout,
   currentMonth,
   currentYear,
   onChangeMonth,
@@ -84,92 +98,108 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* View Switcher Tabs (Manager vs Staff) */}
-        <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs font-semibold">
-          <button
-            onClick={() => setActiveView('manager')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
-              activeView === 'manager'
-                ? 'bg-white text-gray-900 shadow-xs'
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>管理主管視角</span>
-            {pendingCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-bold animate-pulse">
-                {pendingCount}
-              </span>
-            )}
-          </button>
+        {/* View Switcher Tabs (Strict RBAC) */}
+        {currentProfile.role === 'manager' ? (
+          <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs font-semibold">
+            <button
+              onClick={() => setActiveView('manager')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                activeView === 'manager'
+                  ? 'bg-white text-gray-900 shadow-xs font-bold'
+                  : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>管理主管視角</span>
+              {pendingCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-bold animate-pulse">
+                  {pendingCount}
+                </span>
+              )}
+            </button>
 
-          <button
-            onClick={() => setActiveView('staff')}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all ${
-              activeView === 'staff'
-                ? 'bg-white text-gray-900 shadow-xs'
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
-          >
+            <button
+              onClick={() => setActiveView('staff')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                activeView === 'staff'
+                  ? 'bg-white text-gray-900 shadow-xs font-bold'
+                  : 'text-gray-500 hover:text-gray-800'
+              }`}
+            >
+              <Calendar className="w-4 h-4 text-blue-600" />
+              <span>員工排休視角</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 bg-blue-50/90 border border-blue-200/80 text-blue-900 px-3 py-1.5 rounded-xl text-xs font-bold shadow-2xs">
             <Calendar className="w-4 h-4 text-blue-600" />
-            <span>員工排休視角</span>
-          </button>
-        </div>
+            <span>員工個人排休專屬視角</span>
+            <span className="text-[10px] bg-blue-200/80 text-blue-900 px-2 py-0.5 rounded-md font-mono font-bold">
+              {currentProfile.employee_code}
+            </span>
+          </div>
+        )}
 
         {/* Role & Switcher + Actions */}
-        <div className="flex items-center gap-3">
-          {/* Quick User Switcher */}
+        <div className="flex items-center gap-2.5">
+          {/* User Profile Pill */}
           <div className="flex items-center gap-2 bg-gray-50 border border-gray-200/90 rounded-xl px-2.5 py-1.5">
             <div className="flex items-center gap-2">
               <StaffAvatar profile={currentProfile} size="sm" />
-              <div className="text-left hidden md:block">
-                <div className="text-xs font-bold text-gray-900 leading-tight">
-                  {currentProfile.full_name}
+              <div className="text-left">
+                <div className="text-xs font-bold text-gray-900 leading-tight flex items-center gap-1">
+                  <span>{currentProfile.full_name}</span>
+                  <span className="font-mono text-[10px] font-bold px-1.5 py-0.2 bg-gray-200 text-gray-800 rounded">
+                    {currentProfile.employee_code}
+                  </span>
                 </div>
                 <div className="text-[10px] text-gray-500 font-medium">
                   {currentProfile.role === 'manager' ? (
-                    <span className="text-emerald-700 font-semibold">● 主廚/管理者 ({currentProfile.employee_code})</span>
+                    <span className="text-emerald-700 font-semibold">● 主廚/管理者</span>
                   ) : (
                     <span className="text-blue-700 font-semibold">
-                      ● {currentProfile.employee_code} {currentProfile.default_shift ? `• 班別 ${currentProfile.default_shift}` : ''}
+                      ● 廚房同仁 {currentProfile.default_shift ? `• 班別 ${currentProfile.default_shift}` : ''}
                     </span>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Dropdown switch active user */}
-            <select
-              value={currentProfile.id}
-              onChange={(e) => {
-                const found = allProfiles.find(p => p.id === e.target.value);
-                if (found) {
-                  onSelectProfile(found);
-                  if (found.role === 'manager') {
-                    setActiveView('manager');
-                  } else {
-                    setActiveView('staff');
+            {/* If manager: allow previewing other staff; If staff: locked */}
+            {currentProfile.role === 'manager' && (
+              <select
+                value={currentProfile.id}
+                onChange={(e) => {
+                  const found = allProfiles.find(p => p.id === e.target.value);
+                  if (found) {
+                    onSelectProfile(found);
+                    if (found.role === 'manager') {
+                      setActiveView('manager');
+                    } else {
+                      setActiveView('staff');
+                    }
                   }
-                }
-              }}
-              className="bg-transparent border-0 text-xs font-semibold text-gray-700 focus:ring-0 cursor-pointer pl-1 pr-2 py-1"
-              aria-label="切換測試同仁"
-            >
-              <optgroup label="主管／管理員">
-                {allProfiles.filter(p => p.role === 'manager').map(p => (
-                  <option key={p.id} value={p.id}>
-                    [{p.employee_code}] {p.full_name} (管理員)
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="廚房同仁 (15 位)">
-                {allProfiles.filter(p => p.role === 'staff').map(p => (
-                  <option key={p.id} value={p.id}>
-                    [{p.employee_code}] {p.full_name} {p.default_shift ? `• 班別 ${p.default_shift}` : ''}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
+                }}
+                className="bg-transparent border-0 text-xs font-semibold text-gray-700 focus:ring-0 cursor-pointer pl-1 pr-2 py-1"
+                aria-label="切換測試同仁"
+                title="主管切換視角同仁"
+              >
+                <optgroup label="主管／管理員">
+                  {allProfiles.filter(p => p.role === 'manager').map(p => (
+                    <option key={p.id} value={p.id}>
+                      [{p.employee_code}] {p.full_name} (管理員)
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="廚房同仁 (15 位)">
+                  {allProfiles.filter(p => p.role === 'staff').map(p => (
+                    <option key={p.id} value={p.id}>
+                      [{p.employee_code}] {p.full_name} {p.default_shift ? `• 班別 ${p.default_shift}` : ''}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            )}
           </div>
 
           {/* Add & Import Staff Buttons (for Manager) */}
@@ -177,7 +207,7 @@ export default function Navbar({
             <div className="hidden lg:flex items-center gap-1.5">
               <button
                 onClick={onOpenImportStaff}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300/80 rounded-lg text-xs font-semibold transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300/80 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 title="匯入人員清單：工號、姓名、到職日、預設班別"
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
@@ -186,7 +216,7 @@ export default function Navbar({
 
               <button
                 onClick={onOpenAddStaff}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-semibold transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4 text-gray-600" />
                 <span>新增員工</span>
@@ -194,25 +224,34 @@ export default function Navbar({
             </div>
           )}
 
-          {/* Open Login Modal Button */}
+          {/* Switch User Modal Button */}
           <button
             onClick={onOpenLogin}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-300/60 rounded-lg text-xs font-semibold transition-colors"
-            title="開啟同仁登入 / 排休登記介面"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-800 border border-amber-300/60 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+            title="切換其他員工帳號"
           >
-            <KeyRound className="w-4 h-4 text-amber-600" />
-            <span className="hidden sm:inline">同仁登入</span>
-            <span className="sm:hidden">登入</span>
+            <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+            <span className="hidden sm:inline">切換身分</span>
+            <span className="sm:hidden">切換</span>
+          </button>
+
+          {/* Logout Button */}
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+            title="登出目前帳號，返回身分驗證登入門戶"
+          >
+            <LogOut className="w-3.5 h-3.5 text-rose-600" />
+            <span>登出</span>
           </button>
 
           {/* Open Supabase SQL & Next.js Docs */}
           <button
             onClick={onOpenDoc}
-            className="flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
           >
             <Database className="w-4 h-4" />
-            <span className="hidden sm:inline">SQL架構說明</span>
-            <span className="sm:hidden">SQL</span>
+            <span>SQL架構說明</span>
           </button>
         </div>
       </div>

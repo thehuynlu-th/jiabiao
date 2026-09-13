@@ -16,6 +16,7 @@ import ImportStaffModal from './components/ImportStaffModal';
 import ImportScheduleModal from './components/ImportScheduleModal';
 import StaffShiftSettingsModal from './components/StaffShiftSettingsModal';
 import LoginModal from './components/LoginModal';
+import LoginScreen from './components/LoginScreen';
 import { StaffAvatar, isFemaleStaff } from './components/StaffAvatar';
 import { getDaysInMonth } from './lib/dateUtils';
 import {
@@ -51,20 +52,24 @@ export default function App() {
     return INITIAL_PROFILES;
   });
 
-  const [currentProfile, setCurrentProfile] = useState<Profile>(() => {
+  const [currentProfile, setCurrentProfile] = useState<Profile | null>(() => {
     try {
       localStorage.removeItem('kitchen_current_user_code_v5');
       localStorage.removeItem('kitchen_current_user_code_v6');
       localStorage.removeItem('kitchen_current_user_code_v7');
-      const savedCode = localStorage.getItem('kitchen_current_user_code_v8');
-      if (savedCode) {
-        const found = profiles.find((p) => p.employee_code.toLowerCase() === savedCode.toLowerCase());
+      localStorage.removeItem('kitchen_current_user_code_v8');
+
+      // Check session storage to maintain login across in-session page reloads
+      const savedSessionId = sessionStorage.getItem('kitchen_authenticated_user_id');
+      if (savedSessionId) {
+        const found = profiles.find((p) => p.id === savedSessionId);
         if (found) return found;
       }
     } catch (e) {
       console.error(e);
     }
-    return profiles.find((p) => p.role === 'manager') || ADMIN_PROFILE;
+    // Strict requirement: When opening website, require login first to determine role & permissions
+    return null;
   });
 
   // Start with 0 leave requests so staff can cleanly register their days off
@@ -346,26 +351,61 @@ export default function App() {
     setProfiles((prev) => [...prev, ...newProfilesWithId]);
   };
 
+  const handleLoginSuccess = (selected: Profile) => {
+    setCurrentProfile(selected);
+    try {
+      sessionStorage.setItem('kitchen_authenticated_user_id', selected.id);
+    } catch (e) {
+      console.error(e);
+    }
+    if (selected.role === 'manager') {
+      setActiveView('manager');
+    } else {
+      setActiveView('staff');
+    }
+    setIsLoginOpen(false);
+  };
+
+  const handleLogout = () => {
+    try {
+      sessionStorage.removeItem('kitchen_authenticated_user_id');
+    } catch (e) {
+      console.error(e);
+    }
+    setCurrentProfile(null);
+    setIsLoginOpen(false);
+  };
+
+  // Enforce authentication gate: User must log in first to determine permissions
+  if (!currentProfile) {
+    return (
+      <LoginScreen
+        availableStaff={profiles}
+        onLoginSuccess={handleLoginSuccess}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50/70 text-gray-900 flex flex-col font-sans">
       {/* Top Navbar */}
       <Navbar
         currentProfile={currentProfile}
         allProfiles={profiles}
-        onSelectProfile={(p) => {
-          setCurrentProfile(p);
-          try {
-            localStorage.setItem('kitchen_current_user_code_v8', p.employee_code);
-          } catch (e) {
-            console.error(e);
-          }
-        }}
+        onSelectProfile={handleLoginSuccess}
         activeView={activeView}
-        setActiveView={setActiveView}
+        setActiveView={(view) => {
+          // If staff, forbid switching to manager view
+          if (currentProfile.role === 'staff' && view === 'manager') {
+            return;
+          }
+          setActiveView(view);
+        }}
         onOpenDoc={() => setIsDocOpen(true)}
         onOpenAddStaff={() => setIsAddStaffOpen(true)}
         onOpenImportStaff={() => setIsImportStaffOpen(true)}
         onOpenLogin={() => setIsLoginOpen(true)}
+        onLogout={handleLogout}
         currentMonth={month}
         currentYear={year}
         onChangeMonth={handleChangeMonth}
@@ -543,19 +583,7 @@ export default function App() {
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
         availableStaff={profiles}
-        onLoginSuccess={(selected) => {
-          setCurrentProfile(selected);
-          try {
-            localStorage.setItem('kitchen_current_user_code_v8', selected.employee_code);
-          } catch (e) {
-            console.error(e);
-          }
-          if (selected.role === 'manager') {
-            setActiveView('manager');
-          } else {
-            setActiveView('staff');
-          }
-        }}
+        onLoginSuccess={handleLoginSuccess}
       />
     </div>
   );
